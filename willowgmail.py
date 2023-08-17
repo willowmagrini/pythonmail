@@ -27,11 +27,12 @@ class WillowGmailClient:
         service = build('gmail', 'v1', credentials=creds)
         return service
 
-    def create_message(self, sender, to, subject, message_text):
+    def create_message(self, sender, to, bcc,subject, message_text):
         message = MIMEText(message_text)
         message['to'] = to
         message['from'] = sender
         message['subject'] = subject
+        message['bcc'] = bcc
         return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
 
     def send_message(self, user_id, message):
@@ -47,3 +48,21 @@ class WillowGmailClient:
         results = self.service.users().messages().list(userId=user_id, q=query).execute()
         messages = results.get('messages', [])
         return messages
+    
+    
+    def list_labels(self, user_id):
+        try:
+            response = self.service.users().labels().list(userId=user_id).execute()
+            labels = response['labels']
+            return labels
+        except Exception as error:
+            print('An error occurred: %s' % error)
+
+
+    def get_label_id_by_name(self, user_id, label_name):
+        labels = self.list_labels(user_id)
+        if labels is not None:
+            for label in labels:
+                if label['name'] == label_name:
+                    return label['id']
+        return None
