@@ -45,3 +45,9 @@ def send_message(service, user_id, message):
     except Exception as error:
         print(error)
 
+def get_messages_from_subject(subject):
+    query = f'subject:"{subject}"'
+    results = service.users().messages().list(userId=user_id, q=query).execute()
+    messages = results.get('messages', [])
+    
+    return messages
