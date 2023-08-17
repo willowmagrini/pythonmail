@@ -7,26 +7,24 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
-
 def get_gmail_service():    
     SCOPES = ['https://mail.google.com/']
-    # If modifying these scopes, delete the file token.json.
     creds = None
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
+    
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
+        
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
+
     service = build('gmail', 'v1', credentials=creds)
     return service
-
 
 def create_message(sender, to, subject, message_text):
     message = MIMEText(message_text)
@@ -34,7 +32,6 @@ def create_message(sender, to, subject, message_text):
     message['from'] = sender
     message['subject'] = subject
     return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
-
 
 def send_message(service, user_id, message):
     try:
@@ -45,9 +42,8 @@ def send_message(service, user_id, message):
     except Exception as error:
         print(error)
 
-def get_messages_from_subject(subject):
+def get_messages_from_subject(service, subject):
     query = f'subject:"{subject}"'
-    results = service.users().messages().list(userId=user_id, q=query).execute()
+    results = service.users().messages().list(userId="me", q=query).execute()
     messages = results.get('messages', [])
-    
     return messages
