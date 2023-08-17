@@ -35,10 +35,12 @@ class WillowGmailClient:
         message['bcc'] = bcc
         return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
 
-    def send_message(self, user_id, message):
+    def send_message(self, user_id, message,labels=[]):
         try:
             message = (self.service.users().messages().send(userId=user_id, body=message).execute())
             print('Message Id: %s' % message['id'])
+            if labels:
+                self.add_label(user_id, message['id'], labels)
             return message
         except Exception as error:
             print(error)
@@ -66,3 +68,11 @@ class WillowGmailClient:
                 if label['name'] == label_name:
                     return label['id']
         return None
+    
+    def add_label(self, user_id, msg_id, label_ids):
+        try:
+            message = self.service.users().messages().modify(userId=user_id, id=msg_id,
+                                                        body={'addLabelIds': label_ids}).execute()
+            print('Label added to Message ID: %s' % message['id'])
+        except Exception as error:
+            print('An error occurred: %s' % error)
