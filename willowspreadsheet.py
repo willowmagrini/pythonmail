@@ -101,7 +101,7 @@ class WillowGoogleSheetClient:
 
 # Exemplo de uso da classe:
 if __name__ == '__main__':
-    sheet_client = GoogleSheetClient()
+    sheet_client = WillowGoogleSheetClient()
     clients_data = sheet_client.get_clients()
     active_clients = sheet_client.filter_active_clients(clients_data)
     clients_emails = sheet_client.get_clients_emails(active_clients)

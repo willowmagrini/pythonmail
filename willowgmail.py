@@ -2,10 +2,12 @@ from __future__ import print_function
 import base64
 import os.path
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+import utils
 
 class WillowGmailClient:
     def __init__(self):
@@ -76,3 +78,84 @@ class WillowGmailClient:
             print('Label added to Message ID: %s' % message['id'])
         except Exception as error:
             print('An error occurred: %s' % error)
+
+    def get_thread_id(self, message_id):
+        """Pega o ID da thread de uma mensagem."""
+        message = self.service.users().messages().get(userId='me', id=message_id).execute()
+        return message['threadId']
+
+    def get_messages_in_thread(self, thread_id):
+        """Pega todas as mensagens em uma thread."""
+        thread = self.service.users().threads().get(userId='me', id=thread_id).execute()
+        return thread['messages']
+
+    def get_from_address(self, message):
+        """Pega o endereço do remetente de uma mensagem."""
+        for header in message['payload']['headers']:
+            if header['name'] == 'From':
+                return header['value']
+        return None
+
+    def get_reply_senders(self, sent_message_id):
+        """Pega os remetentes de todas as respostas a um e-mail enviado."""
+        thread_id = self.get_thread_id(sent_message_id)
+        messages_in_thread = self.get_messages_in_thread(thread_id)
+        reply_senders = []
+        for message in messages_in_thread:
+            if message['id'] != sent_message_id:
+                from_address = self.get_from_address(message)
+                if from_address:
+                    reply_senders.append(from_address)
+        return reply_senders
+    
+    def search_messages(self, query):
+        """Procura mensagens que correspondem a um critério de pesquisa e retorna os IDs das mensagens."""
+        try:
+            response = self.service.users().messages().list(userId='me', q=query).execute()
+            if 'messages' in response:
+                return [msg['id'] for msg in response['messages']]
+            else:
+                return []
+        except Exception as error:
+            print('An error occurred: %s' % error)
+            return []
+    def get_message(self, msg_id):
+        try:
+            message = self.service.users().messages().get(userId='me', id=msg_id).execute()
+            return message
+        except Exception as error:
+            print('An error occurred: %s' % error)
+            return None
+    
+    def get_replies_message_by_subject(self,subject):
+        original_messages = self.search_messages('subject:"'+subject+'"')
+        original_message_id = original_messages[0]
+        senders = self.get_reply_senders(original_message_id)
+        return senders  
+    
+    def get_messages_with_subject_and_label(self, subject, label_name):
+        query = f'subject:"{subject}" label:{label_name}'
+        messages = self.search_messages(query)
+        return messages
+    
+    def email_already_sent_this_month(self):
+        """
+        Verifica se o e-mail já foi enviado neste mês.
+        
+        Retorna:
+        - True se o e-mail já foi enviado.
+        - False caso contrário.
+        """
+        
+        # Pega o mês e ano atual usando a função existente em utils
+        date = utils.Utils().get_current_month_year()
+        
+        # Formata o assunto para a busca
+        query = f'subject:"Colaboração para o servidor [{date}]"'
+        
+        # Busca por e-mails que atendam ao critério
+        results = self.service.users().messages().list(userId='me', q=query).execute()
+        messages = results.get('messages', [])
+        
+        # Se houver e-mails que atendam ao critério, isso significa que um e-mail já foi enviado neste mês
+        return len(messages) > 0
