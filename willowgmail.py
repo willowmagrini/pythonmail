@@ -159,3 +159,8 @@ class WillowGmailClient:
         
         # Se houver e-mails que atendam ao critério, isso significa que um e-mail já foi enviado neste mês
         return len(messages) > 0
+    
+
+    def get_email_content(self,filename):
+        with open(filename, 'r') as file:
+            return file.read()
